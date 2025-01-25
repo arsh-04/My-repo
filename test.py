@@ -3,8 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load datasets
-X_data = pd.read_csv(r'C:\Users\USER\OneDrive\Desktop\logisticX.csv', header=None)
-Y_data = pd.read_csv(r'C:\Users\USER\OneDrive\Desktop\logisticY.csv', header=None)
+X_data = pd.read_csv(r'C:\Users\KIIT\Downloads\logisticX.csv', header=None)
+Y_data = pd.read_csv(r'C:\Users\KIIT\Downloads\logisticY.csv', header=None)
 
 # Normalize the independent variables
 X_normalized = (X_data - X_data.mean()) / X_data.std()
