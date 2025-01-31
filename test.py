@@ -3,119 +3,123 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load datasets
-X_data = pd.read_csv(r'C:\Users\KIIT\Downloads\logisticX.csv', header=None)
-Y_data = pd.read_csv(r'C:\Users\KIIT\Downloads\logisticY.csv', header=None)
+features = pd.read_csv(r'C:\Users\KIIT\Downloads\logisticX.csv', header=None)
+target = pd.read_csv(r'C:\Users\KIIT\Downloads\logisticY.csv', header=None)
 
-# Normalize the independent variables
-X_normalized = (X_data - X_data.mean()) / X_data.std()
+# Standardize the feature set
+features_standardized = (features - features.mean()) / features.std()
 
-# Add a column of ones for the intercept term
-X_normalized.insert(0, 'Intercept', 1)
+# Append bias term (intercept)
+features_standardized.insert(0, 'Bias', 1)
 
 # Convert to numpy arrays
-X = X_normalized.values
-Y = Y_data.values
+X = features_standardized.values
+y = target.values
 
-# Define sigmoid function
-def sigmoid(z):
-    return 1 / (1 + np.exp(-z))
+# Activation function (sigmoid)
+def sigmoid_function(value):
+    return 1 / (1 + np.exp(-value))
 
-# Define cost function
-def compute_cost(X, Y, theta):
-    m = len(Y)
-    predictions = sigmoid(X @ theta)
-    cost = (-1 / m) * (Y.T @ np.log(predictions) + (1 - Y).T @ np.log(1 - predictions))
-    return cost[0][0]
+# Cost function
+def compute_loss(X, y, params):
+    num_samples = len(y)
+    predictions = sigmoid_function(X @ params)
+    loss = (-1 / num_samples) * (y.T @ np.log(predictions) + (1 - y).T @ np.log(1 - predictions))
+    return loss[0][0]
 
-# Gradient descent implementation
-def gradient_descent(X, Y, theta, learning_rate, iterations):
-    m = len(Y)
-    cost_history = []
+# Gradient Descent with Early Stopping
+def gradient_optimization(X, y, params, alpha, max_iterations, tolerance=1e-6):
+    num_samples = len(y)
+    loss_history = []
+    previous_loss = float('inf')
+    
+    for _ in range(max_iterations):
+        predictions = sigmoid_function(X @ params)
+        params -= (alpha / num_samples) * (X.T @ (predictions - y))
+        current_loss = compute_loss(X, y, params)
+        loss_history.append(current_loss)
+        
+        # Early stopping condition
+        if abs(previous_loss - current_loss) < tolerance:
+            break
+        previous_loss = current_loss
+    
+    return params, loss_history
 
-    for _ in range(iterations):
-        predictions = sigmoid(X @ theta)
-        theta -= (learning_rate / m) * (X.T @ (predictions - Y))
-        cost_history.append(compute_cost(X, Y, theta))
-
-    return theta, cost_history
-
-# Initialize variables
+# Initialize parameters
 learning_rate = 0.1
 iterations = 1000
-theta_initial = np.zeros((X.shape[1], 1))
+params_initial = np.zeros((X.shape[1], 1))
 
-# Train logistic regression model
-theta_optimal, cost_history = gradient_descent(X, Y, theta_initial, learning_rate, iterations)
-final_cost = compute_cost(X, Y, theta_optimal)
+# Train the model
+optimized_params, loss_values = gradient_optimization(X, y, params_initial, learning_rate, iterations)
+final_loss = compute_loss(X, y, optimized_params)
 
-# Plot cost function vs iterations
+# Plot loss curve
 plt.figure(figsize=(8, 6))
-plt.plot(range(1, iterations + 1), cost_history, label="Learning Rate: 0.1")
-plt.title("Cost Function vs Iterations")
+plt.plot(range(1, len(loss_values) + 1), loss_values, label="Learning Rate: 0.1")
+plt.title("Loss Function vs Iterations")
 plt.xlabel("Iterations")
-plt.ylabel("Cost Function Value")
+plt.ylabel("Loss Value")
 plt.legend()
 plt.grid()
 plt.show()
 
-# Plot dataset with decision boundary
+# Visualize dataset with decision boundary (without scatter plot)
 plt.figure(figsize=(8, 6))
-class_0 = Y.flatten() == 0
-class_1 = Y.flatten() == 1
-plt.plot(X[class_0, 1], X[class_0, 2], 'bo-', label='Class 0')
-plt.plot(X[class_1, 1], X[class_1, 2], 'ro-', label='Class 1')
+positive_class = y.flatten() == 1
+negative_class = y.flatten() == 0
+plt.plot(X[positive_class, 1], X[positive_class, 2], 'ro-', label='Positive Class')
+plt.plot(X[negative_class, 1], X[negative_class, 2], 'bo-', label='Negative Class')
 
-# Plot decision boundary
-x_values = np.linspace(X[:, 1].min(), X[:, 1].max(), 100)
-y_values = -(theta_optimal[0] + theta_optimal[1] * x_values) / theta_optimal[2]
-plt.plot(x_values, y_values, 'g-', label='Decision Boundary')
+# Compute decision boundary
+x_vals = np.linspace(X[:, 1].min(), X[:, 1].max(), 100)
+y_vals = -(optimized_params[0] + optimized_params[1] * x_vals) / optimized_params[2]
+plt.plot(x_vals, y_vals, 'g-', label='Decision Boundary')
 
-plt.title("Dataset with Decision Boundary")
+plt.title("Logistic Regression Decision Boundary")
 plt.xlabel("Feature 1")
 plt.ylabel("Feature 2")
 plt.legend()
 plt.grid()
 plt.show()
 
-# Train model with two learning rates and plot cost function
-learning_rates = [0.1, 5]
+# Additional third graph: Cost function comparison with different learning rates
+learning_rates = [0.1, 0.5]
 plt.figure(figsize=(8, 6))
-
 for lr in learning_rates:
-    theta_initial = np.zeros((X.shape[1], 1))
-    _, cost_history_lr = gradient_descent(X, Y, theta_initial, lr, 100)
-    plt.plot(range(1, 101), cost_history_lr, label=f"Learning Rate: {lr}")
+    params_initial = np.zeros((X.shape[1], 1))
+    _, loss_values_lr = gradient_optimization(X, y, params_initial, lr, 100)
+    plt.plot(range(1, len(loss_values_lr) + 1), loss_values_lr, label=f"Learning Rate: {lr}")
 
 plt.title("Cost Function vs Iterations for Different Learning Rates")
 plt.xlabel("Iterations")
-plt.ylabel("Cost Function Value")
+plt.ylabel("Loss Value")
 plt.legend()
 plt.grid()
 plt.show()
 
-# Confusion matrix and metrics
-def confusion_matrix_metrics(X, Y, theta):
-    predictions = sigmoid(X @ theta) >= 0.5
-    tp = np.sum((predictions == 1) & (Y == 1))
-    tn = np.sum((predictions == 0) & (Y == 0))
-    fp = np.sum((predictions == 1) & (Y == 0))
-    fn = np.sum((predictions == 0) & (Y == 1))
-
-    accuracy = (tp + tn) / len(Y)
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+# Model performance metrics
+def performance_metrics(X, y, params):
+    predictions = sigmoid_function(X @ params) >= 0.5
+    true_positives = np.sum((predictions == 1) & (y == 1))
+    true_negatives = np.sum((predictions == 0) & (y == 0))
+    false_positives = np.sum((predictions == 1) & (y == 0))
+    false_negatives = np.sum((predictions == 0) & (y == 1))
+    
+    accuracy = (true_positives + true_negatives) / len(y)
+    precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
+    recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
     f1_score = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-
+    
     return {
-        "Confusion Matrix": [[tn, fp], [fn, tp]],
+        "Confusion Matrix": [[true_negatives, false_positives], [false_negatives, true_positives]],
         "Accuracy": accuracy,
         "Precision": precision,
         "Recall": recall,
         "F1-Score": f1_score,
     }
 
-# Calculate metrics
-metrics = confusion_matrix_metrics(X, Y, theta_optimal)
-
-# Display metrics
-metrics
+# Compute and display performance metrics
+metrics_output = performance_metrics(X, y, optimized_params)
+print(metrics_output)
